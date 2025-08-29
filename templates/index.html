@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Broastería – Pedidos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0f1115; --card:#161a22; --muted:#97a0af; --text:#e6e9ef; --accent:#ffd166; }
+    *{ box-sizing:border-box; }
+    body{ font-family:Inter,system-ui,Segoe UI,Roboto,Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); margin:0; padding:0; }
+    .container{ max-width:900px; margin:0 auto; padding:20px; }
+    h1{ margin:12px 0 6px; font-size:28px; }
+    p.muted{ color:var(--muted); margin-top:0; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin:16px 0 24px; }
+    .card{ background:var(--card); border:1px solid #212736; border-radius:14px; padding:16px; box-shadow:0 6px 24px rgba(0,0,0,.35); }
+    .quick-btn{ width:100%; padding:12px; border-radius:12px; font-weight:700; border:1px solid #2c3447; background:#1c2230; color:#fff; cursor:pointer; transition: transform .06s ease; }
+    .quick-btn:hover{ transform: translateY(-2px); }
+    .form-group{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    input, select, textarea{ background:#0f131b; color:#fff; border:1px solid #2c3447; border-radius:10px; padding:10px; outline:none; }
+    label{ font-weight:600; color:#d9dde5; }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .submit{ padding:12px 16px; border-radius:12px; font-weight:800; border:1px solid #2c3447; background:linear-gradient(180deg, #1f2736, #141a26); color:#fff; cursor:pointer; }
+    .toast{ position:fixed; right:16px; bottom:16px; background:#0f131b; border:1px solid #2c3447; padding:12px 14px; border-radius:12px; display:none; }
+    small.hint{ color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Broastería – Pedidos rápidos</h1>
+    <p class="muted">Selecciona una opción o arma tu pedido. Todo se registra en Google Sheets.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Opciones rápidas</h3>
+        <button class="quick-btn" data-item="Pollo Económico (1/4)">Pollo Económico (1/4)</button>
+        <button class="quick-btn" data-item="Combo Broaster (1/2)">Combo Broaster (1/2)</button>
+        <button class="quick-btn" data-item="Alitas BBQ (6u)">Alitas BBQ (6u)</button>
+        <button class="quick-btn" data-item="Papas Familiares">Papas Familiares</button>
+      </div>
+      <div class="card">
+        <h3>Pedido personalizado</h3>
+        <div class="form-group">
+          <label for="item">Item</label>
+          <input id="item" placeholder="Ej. Pollo Económico (1/4)" />
+        </div>
+        <div class="row">
+          <div class="form-group">
+            <label for="quantity">Cantidad</label>
+            <input id="quantity" type="number" min="1" value="1" />
+          </div>
+          <div class="form-group">
+            <label for="price">Precio estimado (Bs)</label>
+            <input id="price" type="number" min="0" step="0.01" placeholder="Opcional" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notas</label>
+          <textarea id="notes" rows="3" placeholder="Sin picante / Extra salsa / Para mesa 4..."></textarea>
+          <small class="hint">Puedes dejar en blanco.</small>
+        </div>
+        <button class="submit" id="sendOrder">Enviar a Google Sheets</button>
+      </div>
+    </div>
+    <div class="card">
+      <small class="hint">Tip: si usas un dominio propio, ajusta la URL del backend en <code>static/main.js</code>.</small>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
