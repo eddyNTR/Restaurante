@@ -150,7 +150,7 @@
             <strong>Total: <span class="total-amount">26.00</span> Bs.</strong>
           </div>
           <button class="submit order-btn" type="button">
-            Realizar pedido
+            Añadir al pedido
           </button>
         </div>
 
@@ -171,7 +171,7 @@
             <strong>Total: <span class="total-amount">22.00</span> Bs.</strong>
           </div>
           <button class="submit order-btn" type="button">
-            Realizar pedido
+            Añadir al pedido
           </button>
         </div>
 
@@ -196,11 +196,36 @@
             <strong>Total: <span class="total-amount">15.00</span> Bs.</strong>
           </div>
           <button class="submit order-btn" type="button">
-            Realizar pedido
+            Añadir al pedido
           </button>
         </div>
 
         <!-- 🔁 Duplica más tarjetas aquí -->
+      </div>
+      <!-- Carrito: resumen y botones -->
+      <div id="cartCard" class="card" style="margin-top: 16px">
+        <h3>PEDIDO</h3>
+        <div id="cartList" style="min-height: 40px">
+          No hay artículos en el carrito.
+        </div>
+
+        <div
+          style="display: flex; gap: 8px; margin-top: 12px; align-items: center"
+        >
+          <strong>Total: Bs <span id="cartTotal">0.00</span></strong>
+          <div style="flex: 1"></div>
+          <button id="btnClearCart" class="submit">Vaciar</button>
+          <button
+            id="btnSendCart"
+            class="submit"
+            style="background: linear-gradient(180deg, #2a8, #176)"
+          >
+            Enviar pedido
+          </button>
+        </div>
+        <small class="muted"
+          >Agrega varios productos y presiona "Enviar pedido".</small
+        >
       </div>
     </div>
 

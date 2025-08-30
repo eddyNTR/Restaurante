@@ -1,4 +1,4 @@
-// static/main.js (reemplaza el anterior)
+// static/main.js (archivo completo, pegar reemplazando el anterior)
 
 // --- CONFIG ---
 const GAS_EXEC_URL =
@@ -85,7 +85,6 @@ async function sendOrder(payload) {
     const gasResp = await sendToGAS(payload);
 
     // 2) NOTIFICAR al tablero (Flask) en paralelo (no bloqueante)
-    //    intentamos siempre, aunque GAS haya fallado (para que meseros vean la comanda)
     sendToFlask(payload)
       .then((fResp) => {
         if (!fResp.ok)
@@ -110,7 +109,173 @@ async function sendOrder(payload) {
   }
 }
 
-// --- Lógica de tarjetas (mantiene tu comportamiento actual) ---
+// ------------------ CARRITO ------------------
+// carrito en memoria
+const CART = []; // {id,item,qty,unitPrice,totalPrice}
+
+// helper: encuentra índice por item (nombre exacto)
+function findInCart(item) {
+  return CART.findIndex((x) => x.item === item);
+}
+
+function addToCart(item, qty, unitPrice) {
+  qty = parseInt(qty || 1, 10);
+  const idx = findInCart(item);
+  if (idx === -1) {
+    CART.push({
+      id: Math.random().toString(36).slice(2, 9),
+      item,
+      qty,
+      unitPrice: Number(unitPrice) || 0,
+      totalPrice: (Number(unitPrice) || 0) * qty,
+    });
+  } else {
+    CART[idx].qty += qty;
+    CART[idx].totalPrice = CART[idx].qty * (Number(unitPrice) || 0);
+  }
+  renderCart();
+}
+
+function removeFromCart(itemId) {
+  const i = CART.findIndex((x) => x.id === itemId);
+  if (i !== -1) {
+    CART.splice(i, 1);
+    renderCart();
+  }
+}
+
+function updateQty(itemId, newQty) {
+  const i = CART.findIndex((x) => x.id === itemId);
+  if (i !== -1) {
+    CART[i].qty = Math.max(1, parseInt(newQty || 1, 10));
+    CART[i].totalPrice = CART[i].qty * (Number(CART[i].unitPrice) || 0);
+    renderCart();
+  }
+}
+
+function clearCart() {
+  CART.length = 0;
+  renderCart();
+}
+
+function renderCart() {
+  const list = document.getElementById("cartList");
+  const totalSpan = document.getElementById("cartTotal");
+  if (!list) return;
+  if (CART.length === 0) {
+    list.innerHTML = "No hay artículos en el carrito.";
+    totalSpan.textContent = "0.00";
+    return;
+  }
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  let total = 0;
+  CART.forEach((it) => {
+    total += Number(it.totalPrice || 0);
+    html += `
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+        <div style="flex:1">
+          <strong>${it.item}</strong><br/>
+          <small class="muted">Bs ${Number(it.unitPrice).toFixed(2)} c/u</small>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input data-id="${
+            it.id
+          }" class="cart-qty" type="number" min="1" value="${
+      it.qty
+    }" style="width:64px;text-align:center;padding:6px;border-radius:6px;background:#0f131b;border:1px solid #2c3447;color:#fff;">
+          <div style="width:80px;text-align:right">Bs ${Number(
+            it.totalPrice
+          ).toFixed(2)}</div>
+          <button data-id="${
+            it.id
+          }" class="cart-remove quick-btn" style="width:42px;padding:6px">×</button>
+        </div>
+      </div>
+    `;
+  });
+  html += "</div>";
+  list.innerHTML = html;
+  totalSpan.textContent = total.toFixed(2);
+
+  // attach events
+  document.querySelectorAll(".cart-remove").forEach((b) => {
+    b.onclick = () => removeFromCart(b.dataset.id);
+  });
+  document.querySelectorAll(".cart-qty").forEach((i) => {
+    i.onchange = (ev) => updateQty(i.dataset.id, ev.target.value);
+  });
+}
+
+// attachAddToCart: vincula un botón de tarjeta para que agregue al carrito
+function attachAddToCart(orderBtn, item, qtyInput, price) {
+  if (!orderBtn) return;
+  orderBtn.addEventListener("click", () => {
+    const q = parseInt(qtyInput.value || "1", 10);
+    addToCart(item, q, price);
+    showToast("Artículo agregado al carrito");
+  });
+}
+
+// --------- Envío del carrito (un solo botón) ---------
+async function sendCartAsSummary() {
+  // Opción A: enviar UNA FILA resumen -> item = "2x Pollo, 1x Combo", quantity = totalItems, price = total
+  if (CART.length === 0) {
+    showToast("El carrito está vacío");
+    return;
+  }
+  const total = CART.reduce((s, i) => s + (Number(i.totalPrice) || 0), 0);
+  const totalItems = CART.reduce((s, i) => s + Number(i.qty || 0), 0);
+  const itemSummary = CART.map((i) => `${i.qty}x ${i.item}`).join(" • ");
+  const payload = {
+    item: itemSummary,
+    quantity: totalItems,
+    notes: "",
+    price: total.toFixed(2),
+  };
+
+  // 1) enviar a GAS (form-urlencoded via sendToGAS helper)
+  setLoading(true);
+  try {
+    const gasResp = await sendToGAS(payload); // tu función existente (intenta proxy si falla)
+    // 2) notificar al Flask (tablero) – usamos la copia JSON
+    sendToFlask(payload).catch(() => {});
+    if (!gasResp.ok) {
+      showToast(
+        "❌ Error al guardar en Sheets: " +
+          (gasResp.error || gasResp.message || "")
+      );
+      return;
+    }
+    showToast("✅ Pedido enviado: " + itemSummary);
+    clearCart();
+  } catch (err) {
+    console.error(err);
+    showToast("❌ " + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Opcional: Opción B — enviar cada item como fila separada (descomenta/usa si prefieres)
+// async function sendCartAsMultipleRows() {
+//   setLoading(true);
+//   try {
+//     for (const it of CART) {
+//       const payload = { item: it.item, quantity: it.qty, notes:"", price: (it.totalPrice).toFixed(2) };
+//       await sendToGAS(payload);
+//       await sendToFlask(payload); // no bloquear, pero aquí lo hacemos secuencial
+//     }
+//     showToast("✅ Pedido enviado (varias filas)");
+//     clearCart();
+//   } catch (err) {
+//     console.error(err);
+//     showToast("❌ " + err.message);
+//   } finally {
+//     setLoading(false);
+//   }
+// }
+
+// ------------------ LÓGICA DE TARJETAS (INTEGRADA) ------------------
 function setupProductCard(card) {
   const price = parseFloat(card.dataset.price || "0");
   const item = card.dataset.item || "Producto";
@@ -127,38 +292,41 @@ function setupProductCard(card) {
     totalSpan.textContent = (q * price).toFixed(2);
   }
 
-  btnInc.addEventListener("click", () => {
+  btnInc?.addEventListener("click", () => {
     qtyInput.value = parseInt(qtyInput.value || "1", 10) + 1;
     recalc();
   });
-  btnDec.addEventListener("click", () => {
+  btnDec?.addEventListener("click", () => {
     qtyInput.value = Math.max(1, parseInt(qtyInput.value || "1", 10) - 1);
     recalc();
   });
-  qtyInput.addEventListener("input", recalc);
+  qtyInput?.addEventListener("input", recalc);
 
-  orderBtn.addEventListener("click", () => {
-    const q = parseInt(qtyInput.value || "1", 10);
-    const total = (q * price).toFixed(2);
-
-    // payload que se enviará tanto a GAS como a Flask (meseros)
-    const payload = { item, quantity: q, notes: "", price: total };
-
-    // Llamada principal (GAS + notificación a Flask)
-    sendOrder(payload);
-  });
+  // EN LUGAR DE enviar directo, ahora agregamos al carrito
+  attachAddToCart(orderBtn, item, qtyInput, price);
 
   recalc();
 }
 
-// --- Inicialización segura ---
+// ------------------ INICIALIZACIÓN ------------------
 document.addEventListener("DOMContentLoaded", () => {
+  // inicializar tarjetas
   document.querySelectorAll(".product-card").forEach(setupProductCard);
 
-  // opcional: si tienes botones globales (ej. cierre de día)
+  // render carrito
+  renderCart();
+
+  // botones del carrito
+  document.getElementById("btnClearCart")?.addEventListener("click", () => {
+    if (confirm("Vaciar el carrito?")) clearCart();
+  });
+  document.getElementById("btnSendCart")?.addEventListener("click", () => {
+    if (confirm("Enviar pedido al kitchen/meseros?")) sendCartAsSummary();
+  });
+
+  // boton cierre (GAS)
   document.getElementById("btnCierre")?.addEventListener("click", () => {
     if (confirm("¿Seguro que quieres cerrar las ventas del día?")) {
-      // el cierre se hace SOLO en GAS (mantener historial en Sheets)
       (async () => {
         try {
           setLoading(true);
@@ -181,12 +349,9 @@ document.addEventListener("DOMContentLoaded", () => {
       })();
     }
   });
-});
 
-// Abrir tablero de meseros (misma pestaña)
-document.getElementById("btnGoMeseros")?.addEventListener("click", (e) => {
-  // si tu ruta es /meseros en Flask (recomendado):
-  window.location.href = "/meseros";
-  // si quieres abrir una URL completa en otro servidor, usa:
-  // window.location.href = "http://127.0.0.1:5000/meseros";
+  // abrir tablero en nueva pestaña
+  document.getElementById("btnGoMeseros")?.addEventListener("click", () => {
+    window.open("/meseros", "_blank");
+  });
 });
