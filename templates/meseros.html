@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tablero Meseros</title>
+    <style>
+      body {
+        font-family: Inter, system-ui, Arial;
+        background: #0f1115;
+        color: #e6e9ef;
+        margin: 0;
+      }
+      .wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 {
+        margin: 6px 0 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        background: #161a22;
+        border: 1px solid #212736;
+        border-radius: 12px;
+        padding: 12px;
+      }
+      button {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #2c3447;
+        background: #1c2230;
+        color: #fff;
+        cursor: pointer;
+      }
+      .muted {
+        color: #97a0af;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Pedidos (Pendientes)</h1>
+      <div id="list" class="grid"></div>
+    </div>
+
+    <script>
+      const API_BASE = ""; // mismo origen
+
+      async function fetchOrders() {
+        const res = await fetch((API_BASE || "") + "/api/pending");
+        const data = await res.json().catch(() => ({ ok: false, orders: [] }));
+        if (!data.ok) return [];
+        return data.orders;
+      }
+
+      async function markDelivered(id) {
+        const res = await fetch(
+          (API_BASE || "") + "/api/pending/" + id + "/delivered",
+          { method: "POST" }
+        );
+        const data = await res.json().catch(() => ({ ok: false }));
+        return data.ok;
+      }
+
+      function render(orders) {
+        const cont = document.getElementById("list");
+        cont.innerHTML = "";
+        if (!orders.length) {
+          cont.innerHTML =
+            "<div class='muted'>No hay pedidos pendientes.</div>";
+          return;
+        }
+        orders.forEach((o) => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+      <div><strong>${o.item}</strong></div>
+      <div class="muted">Cant: ${o.quantity} • Bs ${o.price || "-"}</div>
+      <div class="muted">${new Date(o.ts).toLocaleString()}</div>
+      ${o.notes ? `<div class="muted">Notas: ${o.notes}</div>` : ""}
+      <div class="row"><small class="muted">ID: ${
+        o.id
+      }</small><button data-id="${o.id}">Entregado</button></div>
+    `;
+          const btn = div.querySelector("button");
+          btn.onclick = async () => {
+            btn.disabled = true;
+            const ok = await markDelivered(o.id);
+            if (ok) load();
+            else {
+              btn.disabled = false;
+              alert("Error al marcar entregado");
+            }
+          };
+          cont.appendChild(div);
+        });
+      }
+
+      async function load() {
+        const orders = await fetchOrders();
+        render(orders);
+      }
+
+      load();
+      setInterval(load, 3000); // refresca cada 3s
+    </script>
+  </body>
+</html>
