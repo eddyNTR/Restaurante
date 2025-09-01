@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": "aad3c92b",
+    "ts": "2025-09-01 14:30:25.753311",
+    "item": "1x Combo Ahorro • 1x Combo Ahorro (Papas, Arroz, Fideo) • 1x Combo Ahorro (Papas, Arroz) • 1x Combo Ahorro (Papas)",
+    "quantity": 4,
+    "notes": "",
+    "price": "104.00"
+  },
+  {
+    "id": "7d9bb7e4",
+    "ts": "2025-09-01 14:42:43.919839",
+    "item": "1x Combo Ahorro (Papas)",
+    "quantity": 1,
+    "notes": "",
+    "price": "36.00"
+  }
+]

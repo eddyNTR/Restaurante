@@ -1,11 +1,6 @@
-// static/main.js (archivo completo, pegar reemplazando el anterior)
-
 // --- CONFIG ---
 const GAS_EXEC_URL =
   "https://script.google.com/macros/s/AKfycbwkc8pkgsIwumXLAXsXcr0BZv07VHRagHDhQTWPWzqPUQNgiM_DtKbV1cNR2tFSJ3mZ/exec";
-// Si tu Flask corre en el mismo origen que la página (recomendado) deja FLASK_API_BASE = ""
-// Si corres Flask en http://127.0.0.1:5000 pero abres index con Live Server en otro puerto, pon:
-// const FLASK_API_BASE = "http://127.0.0.1:5000";
 const FLASK_API_BASE = "";
 
 // --- UI helpers ---
@@ -118,9 +113,9 @@ function findInCart(item) {
   return CART.findIndex((x) => x.item === item);
 }
 
-function addToCart(item, qty, unitPrice) {
+function addToCart(item, qty, unitPrice, sides) {
   qty = parseInt(qty || 1, 10);
-  const idx = findInCart(item);
+  const idx = findInCart(itemAndSidesKey(item, sides));
   if (idx === -1) {
     CART.push({
       id: Math.random().toString(36).slice(2, 9),
@@ -128,12 +123,19 @@ function addToCart(item, qty, unitPrice) {
       qty,
       unitPrice: Number(unitPrice) || 0,
       totalPrice: (Number(unitPrice) || 0) * qty,
+      sides: Array.isArray(sides) ? sides.slice() : [],
     });
   } else {
     CART[idx].qty += qty;
     CART[idx].totalPrice = CART[idx].qty * (Number(unitPrice) || 0);
   }
   renderCart();
+}
+
+// helper para distinguir ítems con distintas guarniciones
+function itemAndSidesKey(item, sides) {
+  if (!sides || sides.length === 0) return item;
+  return item + " | " + sides.join(",");
 }
 
 function removeFromCart(itemId) {
@@ -171,10 +173,18 @@ function renderCart() {
   let total = 0;
   CART.forEach((it) => {
     total += Number(it.totalPrice || 0);
+    const sidesTxt =
+      it.sides && it.sides.length
+        ? `<div style="font-size:0.9em;color:#bfc7d6;margin-top:4px;">Guarniciones: ${it.sides.join(
+            ", "
+          )}</div>`
+        : "";
     html += `
       <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
         <div style="flex:1">
-          <strong>${it.item}</strong><br/>
+          <strong>${it.item}</strong>
+          ${sidesTxt}
+          <br/>
           <small class="muted">Bs ${Number(it.unitPrice).toFixed(2)} c/u</small>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
@@ -207,11 +217,20 @@ function renderCart() {
 }
 
 // attachAddToCart: vincula un botón de tarjeta para que agregue al carrito
-function attachAddToCart(orderBtn, item, qtyInput, price) {
+function attachAddToCart(orderBtn, item, qtyInput, price, cardElem) {
   if (!orderBtn) return;
   orderBtn.addEventListener("click", () => {
     const q = parseInt(qtyInput.value || "1", 10);
-    addToCart(item, q, price);
+
+    // encontrar checkboxes dentro de la misma tarjeta
+    const sides = [];
+    if (cardElem) {
+      cardElem.querySelectorAll(".side-option:checked").forEach((ch) => {
+        sides.push(ch.value || ch.getAttribute("value") || ch.dataset.value);
+      });
+    }
+
+    addToCart(item, q, price, sides);
     showToast("Artículo agregado al carrito");
   });
 }
@@ -225,7 +244,10 @@ async function sendCartAsSummary() {
   }
   const total = CART.reduce((s, i) => s + (Number(i.totalPrice) || 0), 0);
   const totalItems = CART.reduce((s, i) => s + Number(i.qty || 0), 0);
-  const itemSummary = CART.map((i) => `${i.qty}x ${i.item}`).join(" • ");
+  const itemSummary = CART.map((i) => {
+    const s = i.sides && i.sides.length ? ` (${i.sides.join(", ")})` : "";
+    return `${i.qty}x ${i.item}${s}`;
+  }).join(" • ");
   const payload = {
     item: itemSummary,
     quantity: totalItems,
@@ -256,25 +278,6 @@ async function sendCartAsSummary() {
   }
 }
 
-// Opcional: Opción B — enviar cada item como fila separada (descomenta/usa si prefieres)
-// async function sendCartAsMultipleRows() {
-//   setLoading(true);
-//   try {
-//     for (const it of CART) {
-//       const payload = { item: it.item, quantity: it.qty, notes:"", price: (it.totalPrice).toFixed(2) };
-//       await sendToGAS(payload);
-//       await sendToFlask(payload); // no bloquear, pero aquí lo hacemos secuencial
-//     }
-//     showToast("✅ Pedido enviado (varias filas)");
-//     clearCart();
-//   } catch (err) {
-//     console.error(err);
-//     showToast("❌ " + err.message);
-//   } finally {
-//     setLoading(false);
-//   }
-// }
-
 // ------------------ LÓGICA DE TARJETAS (INTEGRADA) ------------------
 function setupProductCard(card) {
   const price = parseFloat(card.dataset.price || "0");
@@ -301,9 +304,7 @@ function setupProductCard(card) {
     recalc();
   });
   qtyInput?.addEventListener("input", recalc);
-
-  // EN LUGAR DE enviar directo, ahora agregamos al carrito
-  attachAddToCart(orderBtn, item, qtyInput, price);
+  attachAddToCart(orderBtn, item, qtyInput, price, card);
 
   recalc();
 }

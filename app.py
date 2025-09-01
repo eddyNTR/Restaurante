@@ -4,10 +4,7 @@ from flask_cors import CORS
 import threading, uuid, json, os
 from datetime import datetime
 
-
 app = Flask(__name__, static_folder="static", template_folder="templates")
-# Si todo lo sirves desde el mismo dominio (Flask), no necesitas CORS.
-# CORS(app)
 
 DATA_FILE = "pending.json"   # archivo opcional para persistir la cola
 _lock = threading.Lock()
