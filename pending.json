@@ -1,18 +1,138 @@
 [
   {
-    "id": "0eb6b401",
-    "ts": "2025-09-12 20:16:19.836885",
-    "item": "2x Combo Ahorro • 1x Combo Ahorro (Papas, Arroz)",
-    "quantity": 3,
+    "id": "6c9cff25",
+    "ts": "2025-09-15 19:06:08.151644",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
     "notes": "",
-    "price": "88.00"
+    "price": 36
   },
   {
-    "id": "156a500b",
-    "ts": "2025-09-12 20:17:12.054073",
-    "item": "1x Combo Ahorro (Papas, Arroz) • 1x Combo Ahorro (Papas, Fideo)",
-    "quantity": 2,
+    "id": "921e6cfa",
+    "ts": "2025-09-15 19:06:57.692398",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
     "notes": "",
-    "price": "72.00"
+    "price": 36
+  },
+  {
+    "id": "41be1a3f",
+    "ts": "2025-09-15 19:07:05.535628",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "a504b639",
+    "ts": "2025-09-15 19:07:38.734755",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "2769bee1",
+    "ts": "2025-09-15 19:08:08.117598",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "780b95f9",
+    "ts": "2025-09-15 19:11:07.863215",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "de5c0f5c",
+    "ts": "2025-09-15 19:16:17.219414",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "d06b5928",
+    "ts": "2025-09-15 19:17:05.698556",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "68a65de2",
+    "ts": "2025-09-15 19:23:59.272432",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "4dd21a40",
+    "ts": "2025-09-15 19:26:02.546449",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "050ffffd",
+    "ts": "2025-09-15 19:28:07.153900",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "164ef678",
+    "ts": "2025-09-15 19:28:40.520894",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "43019af9",
+    "ts": "2025-09-15 19:33:36.899736",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "081ca3ce",
+    "ts": "2025-09-15 19:43:42.338131",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": "36.00"
+  },
+  {
+    "id": "1f9a01ae",
+    "ts": "2025-09-15 19:58:37.115366",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 26
+  },
+  {
+    "id": "8fc907d7",
+    "ts": "2025-09-16 17:13:59.009982",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
+  },
+  {
+    "id": "510f7e06",
+    "ts": "2025-09-16 17:26:47.423315",
+    "item": "1x Combo Ahorro",
+    "quantity": 1,
+    "notes": "",
+    "price": 36
   }
 ]

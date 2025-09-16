@@ -124,7 +124,132 @@
       }
     </style>
   </head>
+
   <body>
+    <!-- Modal de pago (2 pasos) -->
+    <div
+      id="pay-modal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+      "
+    >
+      <div
+        style="
+          max-width: 520px;
+          margin: 5% auto;
+          background: #fff;
+          color: #111;
+          padding: 16px;
+          border-radius: 12px;
+        "
+      >
+        <h3 style="margin-top: 0">
+          Pagar pedido <span id="pm-order-id"></span>
+        </h3>
+
+        <!-- PASO 1: selección -->
+        <div id="pm-step1">
+          <div style="margin: 8px 0">
+            <label
+              ><input type="checkbox" id="pm-with-invoice" /> Con factura</label
+            >
+            <div id="pm-invoice-fields" style="display: none; margin-top: 8px">
+              <input
+                id="pm-nit"
+                placeholder="NIT"
+                style="width: 49%; padding: 8px"
+              />
+              <input
+                id="pm-rs"
+                placeholder="Razón Social"
+                style="width: 49%; padding: 8px"
+              />
+            </div>
+          </div>
+
+          <div style="margin: 8px 0">
+            <strong>Método de pago:</strong><br />
+            <label
+              ><input type="radio" name="pm-method" value="qr" checked />
+              QR</label
+            >
+            <label style="margin-left: 12px"
+              ><input type="radio" name="pm-method" value="card" />
+              Tarjeta</label
+            >
+            <label style="margin-left: 12px"
+              ><input type="radio" name="pm-method" value="cash" />
+              Efectivo</label
+            >
+          </div>
+        </div>
+
+        <!-- PASO 2: resultado -->
+        <div
+          id="pm-result"
+          style="
+            display: none;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+          "
+        >
+          <div id="pm-qr"></div>
+          <div id="pm-redirect" style="display: none">
+            <p>
+              Redirigiendo a checkout…
+              <a id="pm-redirect-link" href="#" target="_blank" rel="noopener"
+                >abrir</a
+              >
+            </p>
+          </div>
+          <div id="pm-voucher" style="display: none">
+            <p>Tu código: <strong id="pm-voucher-code"></strong></p>
+            <small>Vence: <span id="pm-voucher-exp"></span></small>
+          </div>
+          <div style="margin-top: 8px">
+            <button
+              id="pm-mock-paid"
+              style="
+                background: #0a0;
+                color: #fff;
+                padding: 8px 12px;
+                border: 0;
+                border-radius: 6px;
+                cursor: pointer;
+              "
+            >
+              Marcar como pagado (mock)
+            </button>
+          </div>
+        </div>
+
+        <div
+          style="
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+          "
+        >
+          <button id="pm-confirm" class="submit" style="width: auto">
+            Continuar
+          </button>
+          <button
+            id="pm-cancel"
+            class="submit"
+            style="width: auto; background: #333"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
     <div class="container">
       <h1>Broastería – Pedidos</h1>
       <p class="muted">
@@ -296,8 +421,11 @@
       <button id="btnGoMeseros" class="submit" style="margin-left: 12px">
         Ir a Meseros
       </button>
+      <button id="btnIrPago" class="submit">Ir al pago</button>
     </div>
-
+    <script>
+      window.QR_STATIC_URL = "/static/qr/images.jpg";
+    </script>
     <script src="/static/main.js"></script>
   </body>
 </html>

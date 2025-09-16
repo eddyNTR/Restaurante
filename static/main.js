@@ -2,6 +2,7 @@
 const GAS_EXEC_URL =
   "https://script.google.com/macros/s/AKfycbwkc8pkgsIwumXLAXsXcr0BZv07VHRagHDhQTWPWzqPUQNgiM_DtKbV1cNR2tFSJ3mZ/exec";
 const FLASK_API_BASE = "";
+const QR_IMAGE = "/static/qr/images.jpg";
 
 // --- UI helpers ---
 function showToast(msg) {
@@ -237,7 +238,6 @@ function attachAddToCart(orderBtn, item, qtyInput, price, cardElem) {
 
 // --------- Envío del carrito (un solo botón) ---------
 async function sendCartAsSummary() {
-  // Opción A: enviar UNA FILA resumen -> item = "2x Pollo, 1x Combo", quantity = totalItems, price = total
   if (CART.length === 0) {
     showToast("El carrito está vacío");
     return;
@@ -255,11 +255,9 @@ async function sendCartAsSummary() {
     price: total.toFixed(2),
   };
 
-  // 1) enviar a GAS (form-urlencoded via sendToGAS helper)
   setLoading(true);
   try {
-    const gasResp = await sendToGAS(payload); // tu función existente (intenta proxy si falla)
-    // 2) notificar al Flask (tablero) – usamos la copia JSON
+    const gasResp = await sendToGAS(payload);
     sendToFlask(payload).catch(() => {});
     if (!gasResp.ok) {
       showToast(
@@ -311,13 +309,10 @@ function setupProductCard(card) {
 
 // ------------------ INICIALIZACIÓN ------------------
 document.addEventListener("DOMContentLoaded", () => {
-  // inicializar tarjetas
   document.querySelectorAll(".product-card").forEach(setupProductCard);
 
-  // render carrito
   renderCart();
 
-  // botones del carrito
   document.getElementById("btnClearCart")?.addEventListener("click", () => {
     if (confirm("Vaciar el carrito?")) clearCart();
   });
@@ -325,7 +320,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (confirm("Enviar pedido al kitchen/meseros?")) sendCartAsSummary();
   });
 
-  // boton cierre (GAS)
   document.getElementById("btnCierre")?.addEventListener("click", () => {
     if (confirm("¿Seguro que quieres cerrar las ventas del día?")) {
       (async () => {
@@ -351,8 +345,212 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // abrir tablero en nueva pestaña
   document.getElementById("btnGoMeseros")?.addEventListener("click", () => {
     window.open("/meseros", "_blank");
   });
 });
+
+// ====== Pago: manejadores de Continuar / Cancelar (modal de 2 pasos) ======
+(function () {
+  const modal = document.getElementById("pay-modal");
+  const pmOrderId = document.getElementById("pm-order-id");
+  const pmStep1 = document.getElementById("pm-step1");
+  const pmResult = document.getElementById("pm-result");
+
+  const withInvoice = document.getElementById("pm-with-invoice");
+  const invoiceBox = document.getElementById("pm-invoice-fields");
+  const nitInput = document.getElementById("pm-nit");
+  const rsInput = document.getElementById("pm-rs");
+
+  const pmConfirm = document.getElementById("pm-confirm");
+  const pmCancel = document.getElementById("pm-cancel");
+
+  const pmQRBox = document.getElementById("pm-qr");
+  const pmRedirect = document.getElementById("pm-redirect");
+  const pmRedLink = document.getElementById("pm-redirect-link");
+  const pmVoucher = document.getElementById("pm-voucher");
+  const pmVouchCode = document.getElementById("pm-voucher-code");
+  const pmVouchExp = document.getElementById("pm-voucher-exp");
+  const pmMockPaid = document.getElementById("pm-mock-paid");
+
+  if (!modal) return;
+
+  let currentPaymentId = null;
+
+  // Mostrar/ocultar campos de factura
+  withInvoice?.addEventListener("change", () => {
+    if (!invoiceBox) return;
+    invoiceBox.style.display = withInvoice.checked ? "block" : "none";
+  });
+
+  // Botón "Ir al pago" -> abrir modal en Paso 1
+  document.getElementById("btnIrPago")?.addEventListener("click", () => {
+    if (!Array.isArray(CART) || CART.length === 0) {
+      showToast("Primero agrega productos al carrito.");
+      return;
+    }
+    pmOrderId.textContent = "(pendiente)";
+    currentPaymentId = null;
+    pmStep1.style.display = "block";
+    pmResult.style.display = "none";
+    if (pmQRBox) pmQRBox.innerHTML = "";
+    if (pmRedirect) pmRedirect.style.display = "none";
+    if (pmVoucher) pmVoucher.style.display = "none";
+
+    modal.style.display = "block";
+  });
+
+  // ✅ Mostrar QR estático desde /static/qr/pago_qr.png (o el que definas)
+  function showStaticQR(targetEl) {
+    if (!targetEl) return;
+    const src = window.QR_STATIC_URL || "/static/qr/images.jpg";
+    // <— usa la global o la constante corregida
+    console.log("[QR] usando:", src);
+    targetEl.innerHTML =
+      "<p>Escanea para pagar:</p>" +
+      '<img id="pm-qr-img" src="' +
+      src +
+      '" alt="QR de pago" ' +
+      'style="width:220px;height:220px;image-rendering:pixelated;border-radius:8px;border:1px solid #ddd;background:#fff" />';
+    const img = document.getElementById("pm-qr-img");
+    if (img) {
+      img.onload = () => console.log("[QR] cargado OK");
+      img.onerror = () => console.error("[QR] 404/err al cargar:", img.src);
+    }
+  }
+
+  // ✅ Continuar: crea orden, intenta checkout y muestra Paso 2 (con QR estático si method=qr)
+  pmConfirm &&
+    pmConfirm.addEventListener("click", async function () {
+      try {
+        // a) Validar carrito y construir resumen
+        if (!Array.isArray(CART) || CART.length === 0) {
+          showToast("Carrito vacío.");
+          return;
+        }
+        const total = CART.reduce((s, i) => s + (Number(i.totalPrice) || 0), 0);
+        const name = CART.map((i) => {
+          const sides =
+            i.sides && i.sides.length ? ` (${i.sides.join(", ")})` : "";
+          return `${i.qty}x ${i.item}${sides}`;
+        }).join(" + ");
+
+        // b) Crear orden en backend (envía a meseros)
+        const r1 = await fetch("/api/pending", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            item: name,
+            quantity: 1,
+            notes: "",
+            price: Number(total.toFixed(2)),
+          }),
+        });
+        const d1 = await r1.json();
+        if (!d1.ok) {
+          showToast(d1.error || "No se pudo crear el pedido");
+          return;
+        }
+        const order_id = d1.order.id;
+        if (pmOrderId) pmOrderId.textContent = order_id;
+
+        // c) Leer método de pago y datos de factura
+        const methodEl = document.querySelector(
+          'input[name="pm-method"]:checked'
+        );
+        const method = methodEl ? methodEl.value : "qr";
+        const body = {
+          order_id,
+          payment_method: method,
+          with_invoice: !!(withInvoice && withInvoice.checked),
+        };
+        if (withInvoice && withInvoice.checked) {
+          const nit = (nitInput?.value || "").trim();
+          const rs = (rsInput?.value || "").trim();
+          if (!nit || !rs) {
+            alert("Completa NIT y Razón Social.");
+            return;
+          }
+          body.nit = nit;
+          body.razon_social = rs;
+        }
+
+        // d) Iniciar checkout (no bloqueamos el QR si method==='qr')
+        let d2 = { ok: true };
+        try {
+          const r2 = await fetch("/api/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          d2 = await r2.json().catch(() => ({ ok: false }));
+        } catch (e) {
+          console.warn("Checkout request error:", e);
+        }
+
+        // e) Mostrar Paso 2 (resultado)
+        pmStep1.style.display = "none";
+        pmResult.style.display = "block";
+        if (pmQRBox) pmQRBox.innerHTML = "";
+        if (pmRedirect) pmRedirect.style.display = "none";
+        if (pmVoucher) pmVoucher.style.display = "none";
+
+        console.log("[PAY] method:", method);
+
+        // ⬅️ Pintar QR estático si corresponde
+        if (method === "qr") {
+          showStaticQR(pmQRBox); // usa window.QR_STATIC_URL o /static/qr/images.jpg
+        }
+
+        // Tarjeta (si el backend devolvió URL)
+        if (method === "card") {
+          if (pmCardAmt) pmCardAmt.textContent = Number(total).toFixed(2);
+          if (pmCardRef)
+            pmCardRef.textContent = (pmOrderId?.textContent || "").trim();
+          if (pmCard) pmCard.style.display = "block";
+        }
+
+        // Efectivo (si devolvió voucher)
+        if (method === "cash" && d2 && d2.voucher && pmVoucher) {
+          pmVoucher.style.display = "block";
+          if (pmVouchCode) pmVouchCode.textContent = d2.voucher.code || "";
+          if (pmVouchExp) pmVouchExp.textContent = d2.voucher.expires_at || "";
+        }
+
+        //limpiar carrito
+        if (typeof clearCart === "function") clearCart();
+      } catch (err) {
+        console.error(err);
+        showToast("❌ " + (err?.message || err));
+      }
+    });
+
+  // CANCELAR: si estás en Paso 2 -> vuelve a Paso 1; si ya estás en Paso 1 -> cierra modal
+  pmCancel?.addEventListener("click", () => {
+    if (pmResult && pmResult.style.display !== "none") {
+      pmResult.style.display = "none";
+      pmStep1.style.display = "block";
+      currentPaymentId = null;
+      if (pmQRBox) pmQRBox.innerHTML = "";
+      if (pmRedirect) pmRedirect.style.display = "none";
+      if (pmVoucher) pmVoucher.style.display = "none";
+    } else {
+      modal.style.display = "none";
+    }
+  });
+
+  // (solo dev) marcar pago como PAID desde el modal resultado
+  pmMockPaid?.addEventListener("click", async () => {
+    if (!currentPaymentId) return;
+    const r = await fetch(`/api/payments/${currentPaymentId}/mock-paid`, {
+      method: "POST",
+    });
+    const d = await r.json();
+    if (d.ok) {
+      alert("Pago marcado como PAID (mock).");
+      modal.style.display = "none";
+    } else {
+      alert(d.error || "No se pudo marcar pagado");
+    }
+  });
+})();

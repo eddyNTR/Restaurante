@@ -1,2 +1,11 @@
 Flask==3.0.3
 Flask-Cors==4.0.1
+gspread
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+google-cloud-storage
+requests
+python-dotenv
+reportlab
